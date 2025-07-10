@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import MissionList from "@/components/MissionList";
+import TreeGuide from "@/components/TreeGuide";
 
 interface UserTree {
   id: string;
@@ -28,6 +29,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
+  const [showGuide, setShowGuide] = useState<{ open: boolean; tree: any } | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -82,42 +84,79 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="flex flex-wrap gap-8 justify-center">
-          {userTrees.map((ut) => (
-            <div key={ut.id} className="bg-white rounded-3xl shadow-md p-6 flex flex-col items-center w-64">
-              <img
-                src={ut.tree.image_url || STAGE_IMAGES[ut.stage - 1]}
-                alt={ut.tree.name}
-                className="w-24 h-24 object-contain mb-2"
-              />
-              <h2 className="text-xl font-bold text-green-800 mb-1">{ut.tree.name}</h2>
-              <p className="text-green-600 text-sm mb-2">Etapa: {ut.stage}</p>
-              <div className="flex gap-3 mb-2">
+          {userTrees.map((ut) => {
+            // Guías educativas por tipo de árbol
+            const guides: Record<string, { text: string; emoji: string }[]> = {
+              Palta: [
+                { text: "Busca una semilla de palta madura. ¿Listo? ¡Siguiente!", emoji: "🥑" },
+                { text: "Llena una maceta con tierra fértil y húmeda.", emoji: "🪴" },
+                { text: "Haz un pequeño hueco y coloca la semilla con la punta hacia arriba.", emoji: "🌱" },
+                { text: "Agrega un poco de agua, ¡pero no demasiada!", emoji: "💧" },
+                { text: "Pon la maceta en un lugar con sol y revisa cada día.", emoji: "☀️👀" },
+              ],
+              Mango: [
+                { text: "Consigue una semilla de mango y límpiala bien.", emoji: "🥭" },
+                { text: "Plántala en tierra húmeda y fértil.", emoji: "🪴" },
+                { text: "Riega suavemente y mantén la tierra húmeda.", emoji: "💧" },
+                { text: "Coloca la maceta en un lugar cálido y con sol.", emoji: "☀️" },
+                { text: "Observa cómo crece tu mango cada semana.", emoji: "👀" },
+              ],
+              Limón: [
+                { text: "Elige semillas de limón frescas.", emoji: "🍋" },
+                { text: "Plántalas en una maceta con tierra húmeda.", emoji: "🪴" },
+                { text: "Riega con cuidado y no encharques.", emoji: "💧" },
+                { text: "Pon la maceta en un lugar soleado.", emoji: "☀️" },
+                { text: "Cuida tu limonero y mira cómo crece.", emoji: "👀" },
+              ],
+            };
+            const treeName = ut.tree.name;
+            return (
+              <div key={ut.id} className="bg-white rounded-3xl shadow-md p-6 flex flex-col items-center w-64">
+                <img
+                  src={ut.tree.image_url || STAGE_IMAGES[ut.stage - 1]}
+                  alt={ut.tree.name}
+                  className="w-24 h-24 object-contain mb-2"
+                />
+                <h2 className="text-xl font-bold text-green-800 mb-1">{ut.tree.name}</h2>
+                <p className="text-green-600 text-sm mb-2">Etapa: {ut.stage}</p>
+                <div className="flex gap-3 mb-2">
+                  <button
+                    className="bg-blue-200 hover:bg-blue-300 text-blue-900 font-bold py-2 px-4 rounded-full"
+                    onClick={() => handleAction(ut.id, "regar")}
+                  >
+                    Regar
+                  </button>
+                  <button
+                    className="bg-yellow-200 hover:bg-yellow-300 text-yellow-900 font-bold py-2 px-4 rounded-full"
+                    onClick={() => handleAction(ut.id, "cuidar")}
+                  >
+                    Cuidar
+                  </button>
+                  <button
+                    className="bg-green-200 hover:bg-green-300 text-green-900 font-bold py-2 px-4 rounded-full"
+                    onClick={() => handleAction(ut.id, "medir")}
+                  >
+                    Medir
+                  </button>
+                </div>
                 <button
-                  className="bg-blue-200 hover:bg-blue-300 text-blue-900 font-bold py-2 px-4 rounded-full"
-                  onClick={() => handleAction(ut.id, "regar")}
+                  className="mt-2 text-green-700 underline text-sm hover:text-green-900"
+                  onClick={() => setShowGuide({ open: true, tree: { name: treeName, guide: guides[treeName] || [] } })}
                 >
-                  Regar
+                  ¿Cómo plantar?
                 </button>
-                <button
-                  className="bg-yellow-200 hover:bg-yellow-300 text-yellow-900 font-bold py-2 px-4 rounded-full"
-                  onClick={() => handleAction(ut.id, "cuidar")}
-                >
-                  Cuidar
-                </button>
-                <button
-                  className="bg-green-200 hover:bg-green-300 text-green-900 font-bold py-2 px-4 rounded-full"
-                  onClick={() => handleAction(ut.id, "medir")}
-                >
-                  Medir
-                </button>
+                <p className="text-xs text-gray-400">Última acción: {ut.last_action_date ? new Date(ut.last_action_date).toLocaleDateString() : "Nunca"}</p>
               </div>
-              <p className="text-xs text-gray-400">Última acción: {ut.last_action_date ? new Date(ut.last_action_date).toLocaleDateString() : "Nunca"}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {/* Misiones diarias */}
       <MissionList />
+      {/* Guía educativa modal */}
+      {showGuide?.open && (
+        <TreeGuide tree={showGuide.tree} onClose={() => setShowGuide(null)} />
+      )}
     </main>
   );
 } 
